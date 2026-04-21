@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FitCoach Pro — Sistema de Treinos</title>
+
+<!-- iOS Meta Tags -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FitCoach">
+<link rel="apple-touch-icon" href="https://via.placeholder.com/180/c8f135/0e0e0e?text=FitCoach">
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Theme Color -->
+<meta name="theme-color" content="#0e0e0e">
+
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #0e0e0e;
+    --white: #f5f2ec;
+    --lime: #c8f135;
+    --lime-dark: #9fbe1a;
+    --gray: #1c1c1c;
+    --gray2: #2a2a2a;
+    --gray3: #3d3d3d;
+    --muted: #888;
+    --danger: #ff4d4d;
+    --success: #4dff91;
+    --warn: #ffb84d;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--black);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+    /* Suporte para notch do iPhone */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── NOISE TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.5;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ══════════════════════════════════
+     LOGIN SCREEN
+  ══════════════════════════════════ */
+  #login-screen {
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .login-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 80% 20%, rgba(200,241,53,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 10% 80%, rgba(200,241,53,0.06) 0%, transparent 50%);
+  }
+
+  .login-box {
+    position: relative;
+    width: min(440px, 92vw);
+    background: var(--gray);
+    border: 1px solid var(--gray3);
+    border-radius: 20px;
+    padding: 2.5rem;
+    z-index: 2;
+  }
+
+  .login-logo {
+    font-family: var(--font-display);
+    font-size: 2.8rem;
+    letter-spacing: 2px;
+    color: var(--lime);
+    line-height: 1;
+    margin-bottom: 0.2rem;
+  }
+
+  .login-tagline {
+    font-size: 0.78rem;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.2rem;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 0.72rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    background: var(--gray2);
+    border: 1px solid var(--gray3);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--lime);
+  }
+
+  .form-group textarea { resize: vertical; min-height: 80px; }
+  .form-group select option { background: var(--gray2); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--lime);
+    color: var(--black);
+    width: 100%;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .btn-primary:hover { background: var(--lime-dark); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--gray3);
+  }
+  .btn-ghost:hover { border-color: var(--muted); color: var(--white); }
+
+  .btn-danger { background: rgba(255,77,77,0.15); color: var(--danger); border: 1px solid rgba(255,77,77,0.3); }
+  .btn-danger:hover { background: rgba(255,77,77,0.25); }
+
+  .btn-success { background: rgba(77,255,145,0.15); color: var(--success); border: 1px solid rgba(77,255,145,0.3); }
+  .btn-success:hover { background: rgba(77,255,145,0.25); }
+
+  .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.82rem; }
+
+  .login-switch {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .login-switch a {
+    color: var(--lime);
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .error-msg {
+    background: rgba(255,77,77,0.1);
+    border: 1px solid rgba(255,77,77,0.3);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    color: var(--danger);
+    margin-top: 0.8rem;
+    display: none;
+  }
+
+  /* ══════════════════════════════════
+     MAIN LAYOUT (STUDENT + ADMIN)
+  ══════════════════════════════════ */
+  .app-layout {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    padding-top: env(safe-area-inset-top);
+    height: calc(60px + env(safe-area-inset-top));
+    background: var(--gray);
+    border-bottom: 1px solid var(--gray3);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .topbar-logo {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    color: var(--lime);
+    letter-spacing: 1px;
+  }
+
+  .topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--lime);
+    color: var(--black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .badge-admin {
+    background: rgba(200,241,53,0.15);
+    color: var(--lime);
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid rgba(200,241,53,0.3);
+  }
+
+  /* ── TABS (bottom-style or top nav) ── */
+  .nav-tabs {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.6rem 1.5rem;
+    background: var(--gray);
+    border-bottom: 1px solid var(--gray3);
+    overflow-x: auto;
+  }
+
+  .nav-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 1rem;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+
+  .nav-tab:hover { color: var(--white); background: var(--gray2); }
+  .nav-tab.active { background: var(--lime); color: var(--black); }
+
+  .tab-icon { font-size: 14px; }
+
+  /* ── CONTENT AREA ── */
+  .content {
+    flex: 1;
+    padding: 1.8rem 1.5rem;
+    max-width: 960px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── SECTION HEADER ── */
+  .section-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    letter-spacing: 1px;
+    line-height: 1;
+    color: var(--white);
+  }
+
+  .section-sub {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+    letter-spacing: 1px;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--gray);
+    border: 1px solid var(--gray3);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .card-title {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    letter-spacing: 1px;
+    color: var(--lime);
+    margin-bottom: 0.3rem;
+  }
+
+  .card-meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    letter-spacing: 1px;
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--muted);
+  }
+
+  .empty-state .icon {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.8rem;
+    opacity: 0.5;
+  }
+
+  .empty-state p { font-size: 0.9rem; }
+
+  /* ── STAT GRID ── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    background: var(--gray2);
+    border: 1px solid var(--gray3);
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    color: var(--lime);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 0.3rem;
+  }
+
+  /* ── AVALIACAO TABLE ── */
+  .eval-table { width: 100%; border-collapse: collapse; }
+  .eval-table th {
+    background: var(--gray2);
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 0.6rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray3);
+  }
+  .eval-table td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--gray3);
+    font-size: 0.9rem;
+  }
+  .eval-table tr:last-child td { border-bottom: none; }
+  .eval-table .val { font-family: var(--font-mono); color: var(--lime); font-weight: 500; }
+
+  /* ── ADMIN STUDENT LIST ── */
+  .student-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--gray);
+    border: 1px solid var(--gray3);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.7rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .student-row:hover { border-color: var(--muted); }
+
+  .student-row .avatar { width: 40px; height: 40px; font-size: 0.9rem; }
+  .student-row .info { flex: 1; }
+  .student-row .name { font-weight: 600; font-size: 0.95rem; }
+  .student-row .email { font-size: 0.78rem; color: var(--muted); }
+  .student-row .arrow { color: var(--muted); font-size: 1.2rem; }
+
+  /* ── MODAL ── */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: var(--gray);
+    border: 1px solid var(--gray3);
+    border-radius: 20px;
+    padding: 2rem;
+    width: min(600px, 96vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    letter-spacing: 1px;
+    color: var(--lime);
+    margin-bottom: 1.2rem;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 1.4rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .modal-close:hover { color: var(--white); }
+
+  /* ── TAG CHIPS ── */
+  .chip {
+    display: inline-block;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 0.2rem 0.65rem;
+    border-radius: 6px;
+    font-weight: 500;
+  }
+  .chip-lime { background: rgba(200,241,53,0.15); color: var(--lime); border: 1px solid rgba(200,241,53,0.3); }
+  .chip-warn { background: rgba(255,184,77,0.15); color: var(--warn); border: 1px solid rgba(255,184,77,0.3); }
+  .chip-success { background: rgba(77,255,145,0.15); color: var(--success); border: 1px solid rgba(77,255,145,0.3); }
+
+  /* ── DIET ITEMS ── */
+  .meal-block {
+    background: var(--gray2);
+    border: 1px solid var(--gray3);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.8rem;
+  }
+  .meal-time {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--lime);
+    letter-spacing: 2px;
+    margin-bottom: 0.4rem;
+  }
+  .meal-name { font-weight: 600; margin-bottom: 0.3rem; }
+  .meal-desc { font-size: 0.85rem; color: var(--muted); }
+
+  /* ── WORKOUT EXERCISE LIST ── */
+  .exercise-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 0.5rem 1rem;
+    align-items: center;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--gray3);
+    font-size: 0.9rem;
+  }
+  .exercise-row:last-child { border-bottom: none; }
+  .exercise-name { font-weight: 500; }
+  .exercise-detail { font-family: var(--font-mono); font-size: 0.8rem; color: var(--lime); }
+  .exercise-note { font-size: 0.78rem; color: var(--muted); grid-column: 1 / -1; }
+
+  /* ── DIVIDER ── */
+  .divider { height: 1px; background: var(--gray3); margin: 1.5rem 0; }
+
+  /* ── ADMIN FORM GRID ── */
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 500px) { .form-grid-2 { grid-template-columns: 1fr; } }
+
+  .form-row { display: flex; gap: 0.5rem; align-items: flex-end; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 1.5rem;
+    background: var(--gray2);
+    border: 1px solid var(--lime);
+    color: var(--lime);
+    padding: 0.8rem 1.4rem;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    z-index: 500;
+    transform: translateY(4rem);
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--gray3); border-radius: 99px; }
+
+  /*// link inside muted
+  a.link-lime { color: var(--lime); cursor: pointer; text-decoration: none; font-weight: 500; }
+</style>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker registrado!', reg))
+        .catch(err => console.log('Erro ao registrar Service Worker:', err));
+    });
+  }
+</script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     LOGIN SCREEN
+═══════════════════════════════════════ -->
+<div id="login-screen" class="screen active">
+  <div class="login-bg"></div>
+  <div class="login-box">
+    <div class="login-logo">FitCoach</div>
+    <div class="login-tagline">Sistema de Gestão Personal</div>
+
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="btn btn-primary" onclick="doLogin()">Entrar</button>
+    <div class="error-msg" id="login-error">Email ou senha incorretos.</div>
+
+   
+
+<!-- ═══════════════════════════════════════
+     STUDENT SCREEN
+═══════════════════════════════════════ -->
+<div id="student-screen" class="screen">
+  <div class="app-layout">
+    <div class="topbar">
+      <div class="topbar-logo">FitCoach</div>
+      <div class="topbar-user">
+        <div class="avatar" id="student-avatar">JD</div>
+        <span id="student-name-top" style="font-weight:500;">Aluno</span>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Sair</button>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchStudentTab('treino')" id="tab-treino">
+        <span class="tab-icon">🏋️</span> Treino
+      </button>
+      <button class="nav-tab" onclick="switchStudentTab('dieta')" id="tab-dieta">
+        <span class="tab-icon">🥗</span> Dieta
+      </button>
+      <button class="nav-tab" onclick="switchStudentTab('avaliacao')" id="tab-avaliacao">
+        <span class="tab-icon">📊</span> Avaliação
+      </button>
+    </div>
+
+    <div class="content">
+
+      <!-- ── TAB TREINO ── -->
+      <div class="tab-panel active" id="panel-treino">
+        <div class="section-header">
+          <div class="section-title">Planilha de Treino</div>
+          <div class="section-sub">Seu plano personalizado</div>
+        </div>
+        <div id="student-treino-content"></div>
+      </div>
+
+      <!-- ── TAB DIETA ── -->
+      <div class="tab-panel" id="panel-dieta">
+        <div class="section-header">
+          <div class="section-title">Plano Alimentar</div>
+          <div class="section-sub">Dieta personalizada para seus objetivos</div>
+        </div>
+        <div id="student-dieta-content"></div>
+      </div>
+
+      <!-- ── TAB AVALIAÇÃO ── -->
+      <div class="tab-panel" id="panel-avaliacao">
+        <div class="section-header">
+          <div class="section-title">Ficha de Avaliação</div>
+          <div class="section-sub">Avaliação física mais recente</div>
+        </div>
+        <div id="student-avaliacao-content"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     ADMIN SCREEN
+═══════════════════════════════════════ -->
+<div id="admin-screen" class="screen">
+  <div class="app-layout">
+    <div class="topbar">
+      <div class="topbar-logo">FitCoach <span style="color:var(--muted); font-size:0.9rem; font-family:var(--font-body);">Admin</span></div>
+      <div class="topbar-user">
+        <div class="avatar" style="background:var(--lime-dark);">AD</div>
+        <span style="font-weight:500;">Personal Trainer</span>
+        <span class="badge-admin">ADMIN</span>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Sair</button>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchAdminTab('dashboard')" id="atab-dashboard">
+        <span class="tab-icon">📈</span> Dashboard
+      </button>
+      <button class="nav-tab" onclick="switchAdminTab('alunos')" id="atab-alunos">
+        <span class="tab-icon">👥</span> Alunos
+      </button>
+      <button class="nav-tab" onclick="switchAdminTab('publicar')" id="atab-publicar">
+        <span class="tab-icon">📤</span> Publicar
+      </button>
+      <button class="nav-tab" onclick="switchAdminTab('novo-aluno')" id="atab-novo-aluno">
+        <span class="tab-icon">➕</span> Novo Aluno
+      </button>
+    </div>
+
+    <div class="content">
+
+      <!-- ── TAB DASHBOARD ── -->
+      <div class="tab-panel active" id="apanel-dashboard">
+        <div class="section-header">
+          <div class="section-title">Dashboard</div>
+          <div class="section-sub">Visão geral dos seus alunos</div>
+        </div>
+        <div class="stat-grid" id="admin-stats"></div>
+        <div class="section-header" style="margin-top:1rem;">
+          <div style="font-size:0.75rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted);">Alunos Recentes</div>
+        </div>
+        <div id="admin-recent-students"></div>
+      </div>
+
+      <!-- ── TAB ALUNOS ── -->
+      <div class="tab-panel" id="apanel-alunos">
+        <div class="section-header">
+          <div class="section-title">Meus Alunos</div>
+          <div class="section-sub">Gerencie os materiais de cada aluno</div>
+        </div>
+        <div id="admin-students-list"></div>
+      </div>
+
+      <!-- ── TAB PUBLICAR ── -->
+      <div class="tab-panel" id="apanel-publicar">
+        <div class="section-header">
+          <div class="section-title">Publicar Material</div>
+          <div class="section-sub">Envie treinos, dietas e avaliações</div>
+        </div>
+        <div class="card">
+          <div class="form-group">
+            <label>Aluno</label>
+            <select id="pub-student">
+              <option value="">Selecione um aluno...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tipo de Material</label>
+            <select id="pub-type" onchange="updatePubForm()">
+              <option value="">Selecione o tipo...</option>
+              <option value="treino">🏋️ Planilha de Treino</option>
+              <option value="dieta">🥗 Plano Alimentar (Dieta)</option>
+              <option value="avaliacao">📊 Ficha de Avaliação Física</option>
+            </select>
+          </div>
+
+          <!-- TREINO FORM -->
+          <div id="form-treino" style="display:none;">
+            <div class="form-group">
+              <label>Título do Treino</label>
+              <input type="text" id="treino-titulo" placeholder="Ex: Treino A — Peito e Tríceps">
+            </div>
+            <div class="form-group">
+              <label>Objetivo</label>
+              <input type="text" id="treino-objetivo" placeholder="Ex: Hipertrofia, Emagrecimento...">
+            </div>
+            <div class="form-group">
+              <label>Dias da Semana</label>
+              <input type="text" id="treino-dias" placeholder="Ex: Seg, Qua, Sex">
+            </div>
+            <div class="form-group">
+              <label>Exercícios (um por linha: Nome | Séries x Reps | Obs)</label>
+              <textarea id="treino-exercicios" placeholder="Supino Reto | 4x10-12 | Descanso 90s&#10;Crossover | 3x12-15 | Foco na contração&#10;Tríceps Pulley | 4x12 | Pegada pronada"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Observações Gerais</label>
+              <textarea id="treino-obs" placeholder="Dicas gerais, carga progressiva, etc."></textarea>
+            </div>
+          </div>
+
+          <!-- DIETA FORM -->
+          <div id="form-dieta" style="display:none;">
+            <div class="form-group">
+              <label>Objetivo da Dieta</label>
+              <input type="text" id="dieta-objetivo" placeholder="Ex: Hipertrofia com controle calórico">
+            </div>
+            <div class="form-group">
+              <label>Calorias Diárias</label>
+              <input type="text" id="dieta-calorias" placeholder="Ex: 2800 kcal">
+            </div>
+            <div class="form-group">
+              <label>Macros (Proteína / Carbo / Gordura)</label>
+              <input type="text" id="dieta-macros" placeholder="Ex: 200g / 300g / 80g">
+            </div>
+            <div class="form-group">
+              <label>Refeições (uma por linha: Horário | Nome | Descrição)</label>
+              <textarea id="dieta-refeicoes" placeholder="07:00 | Café da Manhã | 4 ovos mexidos + 2 fatias pão integral + café sem açúcar&#10;10:00 | Lanche | 1 banana + whey protein 30g&#10;13:00 | Almoço | 200g frango grelhado + 150g arroz + salada à vontade"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Observações / Restrições</label>
+              <textarea id="dieta-obs" placeholder="Intolerâncias, substituições possíveis, etc."></textarea>
+            </div>
+          </div>
+
+          <!-- AVALIAÇÃO FORM -->
+          <div id="form-avaliacao" style="display:none;">
+            <div class="form-group">
+              <label>Data da Avaliação</label>
+              <input type="date" id="aval-data">
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label>Peso (kg)</label>
+                <input type="text" id="aval-peso" placeholder="75.5">
+              </div>
+              <div class="form-group">
+                <label>Altura (m)</label>
+                <input type="text" id="aval-altura" placeholder="1.75">
+              </div>
+              <div class="form-group">
+                <label>% Gordura Corporal</label>
+                <input type="text" id="aval-gordura" placeholder="18.5">
+              </div>
+              <div class="form-group">
+                <label>Massa Magra (kg)</label>
+                <input type="text" id="aval-massa" placeholder="61.5">
+              </div>
+              <div class="form-group">
+                <label>IMC</label>
+                <input type="text" id="aval-imc" placeholder="Calculado">
+              </div>
+              <div class="form-group">
+                <label>FC Repouso (bpm)</label>
+                <input type="text" id="aval-fc" placeholder="68">
+              </div>
+            </div>
+            <div style="font-size:0.75rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:0.8rem; margin-top:0.5rem;">Medidas Corporais (cm)</div>
+            <div class="form-grid-2">
+              <div class="form-group"><label>Peito</label><input type="text" id="m-peito" placeholder="100"></div>
+              <div class="form-group"><label>Cintura</label><input type="text" id="m-cintura" placeholder="82"></div>
+              <div class="form-group"><label>Quadril</label><input type="text" id="m-quadril" placeholder="98"></div>
+              <div class="form-group"><label>Braço D (contraído)</label><input type="text" id="m-braco" placeholder="36"></div>
+              <div class="form-group"><label>Coxa D</label><input type="text" id="m-coxa" placeholder="55"></div>
+              <div class="form-group"><label>Panturrilha D</label><input type="text" id="m-panturrilha" placeholder="36"></div>
+            </div>
+            <div class="form-group">
+              <label>Observações / Parecer do Personal</label>
+              <textarea id="aval-obs" placeholder="Evolução observada, pontos de atenção, metas para próxima avaliação..."></textarea>
+            </div>
+          </div>
+
+          <div style="margin-top:1rem;">
+            <button class="btn btn-primary" style="width:auto; padding: 0.75rem 2rem;" onclick="publishMaterial()">
+              📤 Publicar para o Aluno
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB NOVO ALUNO ── -->
+      <div class="tab-panel" id="apanel-novo-aluno">
+        <div class="section-header">
+          <div class="section-title">Novo Aluno</div>
+          <div class="section-sub">Cadastre um aluno e defina suas credenciais</div>
+        </div>
+        <div class="card">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Nome Completo</label>
+              <input type="text" id="new-nome" placeholder="João da Silva">
+            </div>
+            <div class="form-group">
+              <label>Email (login)</label>
+              <input type="email" id="new-email" placeholder="joao@email.com">
+            </div>
+            <div class="form-group">
+              <label>Senha de Acesso</label>
+              <input type="text" id="new-senha" placeholder="Mínimo 6 caracteres">
+            </div>
+            <div class="form-group">
+              <label>Telefone</label>
+              <input type="text" id="new-tel" placeholder="(44) 99999-9999">
+            </div>
+            <div class="form-group">
+              <label>Data de Nascimento</label>
+              <input type="date" id="new-nasc">
+            </div>
+            <div class="form-group">
+              <label>Objetivo Principal</label>
+              <input type="text" id="new-objetivo" placeholder="Hipertrofia, emagrecimento...">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Observações</label>
+            <textarea id="new-obs" placeholder="Lesões, restrições, informações relevantes..."></textarea>
+          </div>
+          <div style="margin-top:0.5rem;">
+            <button class="btn btn-primary" style="width:auto; padding: 0.75rem 2rem;" onclick="createStudent()">
+              ✅ Cadastrar Aluno
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODAL — ALUNO DETAIL (ADMIN)
+═══════════════════════════════════════ -->
+<div class="modal-backdrop" id="modal-aluno">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-aluno')">✕</button>
+    <div class="modal-title" id="modal-aluno-title">Aluno</div>
+    <div id="modal-aluno-body"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════
+   DATA STORE (localStorage simulado em memória com persistência real)
+══════════════════════════════════════════ */
+
+function loadDB() {
+  try {
+    const raw = localStorage.getItem('fitcoach_db');
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+
+function saveDB() {
+  try { localStorage.setItem('fitcoach_db', JSON.stringify(db)); } catch(e) {}
+}
+
+const defaultDB = {
+  users: [
+    { id: 'admin', name: 'Personal Trainer', email: 'admin@fitcoach.com', password: 'admin123', role: 'admin' },
+    {
+      id: 'u1', name: 'Carlos Mendes', email: 'aluno@demo.com', password: '123456', role: 'student',
+      phone: '(44) 99123-4567', birthdate: '1995-03-12', objetivo: 'Hipertrofia', obs: 'Sem restrições',
+      treino: {
+        titulo: 'Treino A — Peito, Ombro e Tríceps',
+        objetivo: 'Hipertrofia',
+        dias: 'Segunda, Quarta, Sexta',
+        exercicios: [
+          { nome: 'Supino Reto com Barra', series: '4x10-12', obs: 'Progressão de carga a cada semana' },
+          { nome: 'Supino Inclinado com Halteres', series: '3x12', obs: 'Cotovelos a 45°' },
+          { nome: 'Crossover Alto', series: '3x15', obs: 'Foco na contração máxima' },
+          { nome: 'Desenvolvimento Smith', series: '4x10', obs: 'Barra até a altura da orelha' },
+          { nome: 'Elevação Lateral', series: '4x15', obs: 'Sem balançar o tronco' },
+          { nome: 'Tríceps Pulley Corda', series: '4x12', obs: 'Extensão total do cotovelo' },
+        ],
+        obs: 'Descanso 60-90s entre séries. Hidrate-se bem. Aqueça 10min antes.'
+      },
+      dieta: {
+        objetivo: 'Ganho de massa com controle calórico',
+        calorias: '3.000 kcal',
+        macros: 'Proteína: 220g / Carbo: 330g / Gordura: 80g',
+        refeicoes: [
+          { horario: '07:00', nome: 'Café da Manhã', desc: '4 ovos mexidos + 2 fatias pão integral + 1 banana + café sem açúcar' },
+          { horario: '10:00', nome: 'Lanche 1', desc: 'Whey protein 40g + 1 fruta (maçã ou pera)' },
+          { horario: '13:00', nome: 'Almoço', desc: '220g frango grelhado + 160g arroz branco + feijão 1 concha + salada à vontade com azeite' },
+          { horario: '16:00', nome: 'Pré-treino', desc: 'Batata doce 200g + atum em lata 120g + 1 colher azeite' },
+          { horario: '19:30', nome: 'Pós-treino', desc: 'Whey protein 40g + 1 banana (imediatamente após)' },
+          { horario: '21:00', nome: 'Jantar', desc: 'Salmão 200g ou atum 150g + legumes refogados + brócolis' },
+        ],
+        obs: 'Beba no mínimo 3L de água por dia. Evite açúcar simples e frituras.'
+      },
+      avaliacao: {
+        data: '2025-10-15',
+        peso: '78.5', altura: '1.76', gordura: '16.5', massa: '65.5', imc: '25.3', fc: '65',
+        medidas: { peito: '104', cintura: '82', quadril: '97', braco: '38', coxa: '58', panturrilha: '37' },
+        obs: 'Excelente evolução em 2 meses. Perda de 3% de gordura. Foco agora em reduzir cintura e aumentar peito. Meta: chegar a 14% BF.'
+      }
+    }
+  ]
+};
+
+let db = loadDB() || JSON.parse(JSON.stringify(defaultDB));
+let currentUser = null;
+
+/* ══════════════════════════════════════════
+   AUTH
+══════════════════════════════════════════ */
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  err.style.display = 'none';
+
+  const user = db.users.find(u => u.email.toLowerCase() === email && u.password === pass);
+  if (!user) { err.style.display = 'block'; return; }
+
+  currentUser = user;
+  if (user.role === 'admin') loadAdminScreen();
+  else loadStudentScreen(user);
+}
+
+function logout() {
+  currentUser = null;
+  showScreen('login-screen');
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+/* ══════════════════════════════════════════
+   SCREENS
+══════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ══════════════════════════════════════════
+   STUDENT SCREEN
+══════════════════════════════════════════ */
+function loadStudentScreen(user) {
+  showScreen('student-screen');
+  document.getElementById('student-avatar').textContent = initials(user.name);
+  document.getElementById('student-name-top').textContent = firstName(user.name);
+  renderStudentContent(user);
+  switchStudentTab('treino');
+}
+
+function renderStudentContent(user) {
+  // TREINO
+  const tc = document.getElementById('student-treino-content');
+  if (!user.treino) {
+    tc.innerHTML = emptyState('🏋️','Nenhuma planilha publicada ainda.<br>Aguarde seu personal!');
+  } else {
+    const t = user.treino;
+    tc.innerHTML = `
+      <div class="card">
+        <div class="card-title">${t.titulo}</div>
+        <div class="card-meta">📅 ${t.dias} &nbsp;|&nbsp; 🎯 ${t.objetivo}</div>
+        <div>
+          ${t.exercicios.map(e => `
+            <div class="exercise-row">
+              <div class="exercise-name">${e.nome}</div>
+              <div class="exercise-detail">${e.series}</div>
+              ${e.obs ? `<div class="exercise-note">${e.obs}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>
+        ${t.obs ? `<div class="divider"></div><p style="font-size:0.85rem; color:var(--muted);">💡 ${t.obs}</p>` : ''}
+        <div class="card-actions" style="margin-top:1rem;">
+          <button class="btn btn-success btn-sm" onclick="exportTreinoPDF('${user.id}')">⬇️ Baixar PDF</button>
+        </div>
+      </div>`;
+  }
+
+  // DIETA
+  const dc = document.getElementById('student-dieta-content');
+  if (!user.dieta) {
+    dc.innerHTML = emptyState('🥗','Nenhum plano alimentar publicado ainda.');
+  } else {
+    const d = user.dieta;
+    dc.innerHTML = `
+      <div style="display:flex; gap:0.7rem; flex-wrap:wrap; margin-bottom:1rem;">
+        <span class="chip chip-lime">🔥 ${d.calorias}</span>
+        <span class="chip chip-warn">🎯 ${d.objetivo}</span>
+        <span class="chip chip-success">💪 ${d.macros}</span>
+      </div>
+      ${d.refeicoes.map(r => `
+        <div class="meal-block">
+          <div class="meal-time">${r.horario}</div>
+          <div class="meal-name">${r.nome}</div>
+          <div class="meal-desc">${r.desc}</div>
+        </div>`).join('')}
+      ${d.obs ? `<p style="font-size:0.83rem; color:var(--muted); margin-top:0.8rem;">💡 ${d.obs}</p>` : ''}
+      <div class="card-actions" style="margin-top:1rem;">
+        <button class="btn btn-success btn-sm" onclick="exportDietaPDF('${user.id}')">⬇️ Baixar PDF</button>
+      </div>`;
+  }
+
+  // AVALIAÇÃO
+  const ac = document.getElementById('student-avaliacao-content');
+  if (!user.avaliacao) {
+    ac.innerHTML = emptyState('📊','Nenhuma avaliação registrada ainda.');
+  } else {
+    const a = user.avaliacao;
+    const m = a.medidas;
+    ac.innerHTML = `
+      <div class="card">
+        <div class="card-title">Avaliação Física</div>
+        <div class="card-meta">📅 Data: ${formatDate(a.data)}</div>
+        <table class="eval-table">
+          <thead><tr><th>Medida</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Peso</td><td class="val">${a.peso} kg</td></tr>
+            <tr><td>Altura</td><td class="val">${a.altura} m</td></tr>
+            <tr><td>IMC</td><td class="val">${a.imc}</td></tr>
+            <tr><td>% Gordura Corporal</td><td class="val">${a.gordura}%</td></tr>
+            <tr><td>Massa Magra</td><td class="val">${a.massa} kg</td></tr>
+            <tr><td>FC Repouso</td><td class="val">${a.fc} bpm</td></tr>
+          </tbody>
+        </table>
+        <div class="divider"></div>
+        <div style="font-size:0.72rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:0.8rem;">Medidas Corporais</div>
+        <table class="eval-table">
+          <tbody>
+            <tr><td>Peito</td><td class="val">${m.peito} cm</td></tr>
+            <tr><td>Cintura</td><td class="val">${m.cintura} cm</td></tr>
+            <tr><td>Quadril</td><td class="val">${m.quadril} cm</td></tr>
+            <tr><td>Braço (contraído)</td><td class="val">${m.braco} cm</td></tr>
+            <tr><td>Coxa</td><td class="val">${m.coxa} cm</td></tr>
+            <tr><td>Panturrilha</td><td class="val">${m.panturrilha} cm</td></tr>
+          </tbody>
+        </table>
+        ${a.obs ? `<div class="divider"></div><p style="font-size:0.85rem; color:var(--muted);">💬 <strong>Parecer do Personal:</strong> ${a.obs}</p>` : ''}
+        <div class="card-actions" style="margin-top:1rem;">
+          <button class="btn btn-success btn-sm" onclick="exportAvaliacaoPDF('${user.id}')">⬇️ Baixar PDF</button>
+        </div>
+      </div>`;
+  }
+}
+
+function switchStudentTab(name) {
+  ['treino','dieta','avaliacao'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === name);
+    document.getElementById('panel-' + t).classList.toggle('active', t === name);
+  });
+}
+
+/* ══════════════════════════════════════════
+   ADMIN SCREEN
+══════════════════════════════════════════ */
+function loadAdminScreen() {
+  showScreen('admin-screen');
+  switchAdminTab('dashboard');
+  populateStudentSelects();
+}
+
+function switchAdminTab(name) {
+  ['dashboard','alunos','publicar','novo-aluno'].forEach(t => {
+    document.getElementById('atab-' + t).classList.toggle('active', t === name);
+    document.getElementById('apanel-' + t).classList.toggle('active', t === name);
+  });
+  if (name === 'dashboard') renderAdminDashboard();
+  if (name === 'alunos') renderAdminStudents();
+}
+
+function renderAdminDashboard() {
+  const students = db.users.filter(u => u.role === 'student');
+  const withTreino = students.filter(u => u.treino).length;
+  const withDieta = students.filter(u => u.dieta).length;
+  const withAval = students.filter(u => u.avaliacao).length;
+
+  document.getElementById('admin-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${students.length}</div><div class="stat-label">Alunos</div></div>
+    <div class="stat-card"><div class="stat-num">${withTreino}</div><div class="stat-label">Com Treino</div></div>
+    <div class="stat-card"><div class="stat-num">${withDieta}</div><div class="stat-label">Com Dieta</div></div>
+    <div class="stat-card"><div class="stat-num">${withAval}</div><div class="stat-label">Avaliados</div></div>`;
+
+  document.getElementById('admin-recent-students').innerHTML =
+    students.slice(-4).reverse().map(u => studentRowHTML(u)).join('') ||
+    emptyState('👥','Nenhum aluno cadastrado ainda.');
+}
+
+function renderAdminStudents() {
+  const students = db.users.filter(u => u.role === 'student');
+  document.getElementById('admin-students-list').innerHTML =
+    students.map(u => studentRowHTML(u)).join('') ||
+    emptyState('👥','Nenhum aluno. Cadastre pelo menu <strong>Novo Aluno</strong>.');
+}
+
+function studentRowHTML(u) {
+  const badges = [
+    u.treino ? '<span class="chip chip-lime" style="font-size:0.65rem;">Treino</span>' : '',
+    u.dieta ? '<span class="chip chip-warn" style="font-size:0.65rem;">Dieta</span>' : '',
+    u.avaliacao ? '<span class="chip chip-success" style="font-size:0.65rem;">Avaliação</span>' : ''
+  ].filter(Boolean).join(' ');
+
+  return `
+    <div class="student-row" onclick="openStudentModal('${u.id}')">
+      <div class="avatar">${initials(u.name)}</div>
+      <div class="info">
+        <div class="name">${u.name}</div>
+        <div class="email">${u.email} ${badges ? '&nbsp;' + badges : ''}</div>
+      </div>
+      <div class="arrow">›</div>
+    </div>`;
+}
+
+function openStudentModal(uid) {
+  const u = db.users.find(x => x.id === uid);
+  if (!u) return;
+  document.getElementById('modal-aluno-title').textContent = u.name;
+  document.getElementById('modal-aluno-body').innerHTML = `
+    <p style="font-size:0.85rem; color:var(--muted); margin-bottom:1rem;">
+      📧 ${u.email} &nbsp;|&nbsp; 📱 ${u.phone||'—'} &nbsp;|&nbsp; 🎯 ${u.objetivo||'—'}
+    </p>
+    <div style="display:flex; gap:0.7rem; flex-wrap:wrap; margin-bottom:1.2rem;">
+      <span class="chip ${u.treino?'chip-lime':'chip-warn'}">${u.treino?'✅ Treino publicado':'⚠️ Sem treino'}</span>
+      <span class="chip ${u.dieta?'chip-lime':'chip-warn'}">${u.dieta?'✅ Dieta publicada':'⚠️ Sem dieta'}</span>
+      <span class="chip ${u.avaliacao?'chip-lime':'chip-warn'}">${u.avaliacao?'✅ Avaliação feita':'⚠️ Sem avaliação'}</span>
+    </div>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+      <button class="btn btn-ghost btn-sm" onclick="goPublishFor('${u.id}')">📤 Publicar Material</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDeleteStudent('${u.id}')">🗑️ Remover Aluno</button>
+    </div>
+    <div class="divider"></div>
+    <p style="font-size:0.78rem; color:var(--muted);">Senha de acesso: <span style="font-family:var(--font-mono); color:var(--warn);">${u.password}</span></p>`;
+
+  document.getElementById('modal-aluno').classList.add('open');
+}
+
+function confirmDeleteStudent(uid) {
+  if (!confirm('Tem certeza que deseja remover este aluno?')) return;
+  db.users = db.users.filter(u => u.id !== uid);
+  saveDB();
+  closeModal('modal-aluno');
+  renderAdminStudents();
+  toast('Aluno removido.');
+}
+
+function goPublishFor(uid) {
+  closeModal('modal-aluno');
+  switchAdminTab('publicar');
+  populateStudentSelects();
+  document.getElementById('pub-student').value = uid;
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+/* ══════════════════════════════════════════
+   PUBLISH
+══════════════════════════════════════════ */
+function populateStudentSelects() {
+  const students = db.users.filter(u => u.role === 'student');
+  const opts = '<option value="">Selecione um aluno...</option>' +
+    students.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+  document.getElementById('pub-student').innerHTML = opts;
+}
+
+function updatePubForm() {
+  const type = document.getElementById('pub-type').value;
+  ['treino','dieta','avaliacao'].forEach(t => {
+    document.getElementById('form-' + t).style.display = t === type ? 'block' : 'none';
+  });
+}
+
+function publishMaterial() {
+  const sid = document.getElementById('pub-student').value;
+  const type = document.getElementById('pub-type').value;
+  if (!sid || !type) { toast('Selecione aluno e tipo de material!'); return; }
+
+  const user = db.users.find(u => u.id === sid);
+  if (!user) return;
+
+  if (type === 'treino') {
+    const titulo = document.getElementById('treino-titulo').value.trim();
+    if (!titulo) { toast('Preencha o título do treino!'); return; }
+    const raw = document.getElementById('treino-exercicios').value.trim();
+    const exercicios = raw.split('\n').filter(Boolean).map(line => {
+      const parts = line.split('|').map(s => s.trim());
+      return { nome: parts[0]||'', series: parts[1]||'', obs: parts[2]||'' };
+    });
+    user.treino = {
+      titulo,
+      objetivo: document.getElementById('treino-objetivo').value,
+      dias: document.getElementById('treino-dias').value,
+      exercicios,
+      obs: document.getElementById('treino-obs').value
+    };
+  }
+
+  if (type === 'dieta') {
+    const objetivo = document.getElementById('dieta-objetivo').value.trim();
+    if (!objetivo) { toast('Preencha o objetivo da dieta!'); return; }
+    const raw = document.getElementById('dieta-refeicoes').value.trim();
+    const refeicoes = raw.split('\n').filter(Boolean).map(line => {
+      const parts = line.split('|').map(s => s.trim());
+      return { horario: parts[0]||'', nome: parts[1]||'', desc: parts[2]||'' };
+    });
+    user.dieta = {
+      objetivo,
+      calorias: document.getElementById('dieta-calorias').value,
+      macros: document.getElementById('dieta-macros').value,
+      refeicoes,
+      obs: document.getElementById('dieta-obs').value
+    };
+  }
+
+  if (type === 'avaliacao') {
+    const peso = document.getElementById('aval-peso').value.trim();
+    if (!peso) { toast('Preencha o peso do aluno!'); return; }
+    user.avaliacao = {
+      data: document.getElementById('aval-data').value || new Date().toISOString().split('T')[0],
+      peso, altura: document.getElementById('aval-altura').value,
+      gordura: document.getElementById('aval-gordura').value,
+      massa: document.getElementById('aval-massa').value,
+      imc: document.getElementById('aval-imc').value,
+      fc: document.getElementById('aval-fc').value,
+      medidas: {
+        peito: document.getElementById('m-peito').value,
+        cintura: document.getElementById('m-cintura').value,
+        quadril: document.getElementById('m-quadril').value,
+        braco: document.getElementById('m-braco').value,
+        coxa: document.getElementById('m-coxa').value,
+        panturrilha: document.getElementById('m-panturrilha').value
+      },
+      obs: document.getElementById('aval-obs').value
+    };
+  }
+
+  saveDB();
+  toast(`✅ ${type.charAt(0).toUpperCase()+type.slice(1)} publicado para ${user.name}!`);
+}
+
+/* ══════════════════════════════════════════
+   NEW STUDENT
+══════════════════════════════════════════ */
+function createStudent() {
+  const nome = document.getElementById('new-nome').value.trim();
+  const email = document.getElementById('new-email').value.trim().toLowerCase();
+  const senha = document.getElementById('new-senha').value.trim();
+
+  if (!nome || !email || !senha) { toast('Preencha nome, email e senha!'); return; }
+  if (senha.length < 6) { toast('Senha deve ter mínimo 6 caracteres!'); return; }
+  if (db.users.find(u => u.email.toLowerCase() === email)) { toast('Este email já está cadastrado!'); return; }
+
+  const newUser = {
+    id: 'u' + Date.now(),
+    name: nome, email, password: senha, role: 'student',
+    phone: document.getElementById('new-tel').value,
+    birthdate: document.getElementById('new-nasc').value,
+    objetivo: document.getElementById('new-objetivo').value,
+    obs: document.getElementById('new-obs').value,
+    treino: null, dieta: null, avaliacao: null
+  };
+
+  db.users.push(newUser);
+  saveDB();
+  populateStudentSelects();
+  toast(`✅ Aluno ${nome} cadastrado com sucesso!`);
+
+  // clear
+  ['new-nome','new-email','new-senha','new-tel','new-nasc','new-objetivo','new-obs'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+/* ══════════════════════════════════════════
+   PDF EXPORT
+══════════════════════════════════════════ */
+function exportTreinoPDF(uid) {
+  const user = db.users.find(u => u.id === uid) || currentUser;
+  if (!user || !user.treino) { toast('Sem treino para exportar.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const t = user.treino;
+  let y = 18;
+
+  doc.setFillColor(14, 14, 14);
+  doc.rect(0, 0, 210, 297, 'F');
+
+  doc.setTextColor(200, 241, 53);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.text('FITCOACH PRO', 14, y); y += 8;
+
+  doc.setTextColor(180, 180, 180);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('PLANILHA DE TREINO PERSONALIZADO', 14, y); y += 10;
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(t.titulo, 14, y); y += 7;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(140, 140, 140);
+  doc.text(`Aluno: ${user.name}   |   Dias: ${t.dias}   |   Objetivo: ${t.objetivo}`, 14, y); y += 10;
+
+  doc.setDrawColor(200, 241, 53);
+  doc.line(14, y, 196, y); y += 8;
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(11);
+  t.exercicios.forEach((e, i) => {
+    if (y > 270) { doc.addPage(); doc.setFillColor(14,14,14); doc.rect(0,0,210,297,'F'); y = 14; }
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(200, 241, 53);
+    doc.text(`${i+1}. ${e.nome}`, 14, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(200, 200, 200);
+    doc.text(e.series, 155, y);
+    y += 6;
+    if (e.obs) {
+      doc.setTextColor(120, 120, 120);
+      doc.setFontSize(9);
+      doc.text(`   ${e.obs}`, 14, y);
+      doc.setFontSize(11);
+      y += 5;
+    }
+    y += 3;
+  });
+
+  if (t.obs) {
+    y += 4;
+    doc.setDrawColor(60, 60, 60);
+    doc.line(14, y, 196, y); y += 6;
+    doc.setTextColor(140, 140, 140);
+    doc.setFontSize(9);
+    const lines = doc.splitTextToSize(`Obs: ${t.obs}`, 178);
+    doc.text(lines, 14, y);
+  }
+
+  doc.save(`treino_${user.name.replace(/\s/g,'_')}.pdf`);
+  toast('PDF do treino baixado!');
+}
+
+function exportDietaPDF(uid) {
+  const user = db.users.find(u => u.id === uid) || currentUser;
+  if (!user || !user.dieta) { toast('Sem dieta para exportar.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const d = user.dieta;
+  let y = 18;
+
+  doc.setFillColor(14,14,14); doc.rect(0,0,210,297,'F');
+  doc.setTextColor(200,241,53); doc.setFont('helvetica','bold'); doc.setFontSize(22);
+  doc.text('FITCOACH PRO', 14, y); y += 8;
+  doc.setTextColor(180,180,180); doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text('PLANO ALIMENTAR PERSONALIZADO', 14, y); y += 10;
+  doc.setTextColor(255,255,255); doc.setFontSize(13); doc.setFont('helvetica','bold');
+  doc.text(`${user.name}`, 14, y); y += 6;
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(140,140,140);
+  doc.text(`Objetivo: ${d.objetivo}   |   ${d.calorias}   |   ${d.macros}`, 14, y); y += 8;
+  doc.setDrawColor(200,241,53); doc.line(14,y,196,y); y += 8;
+
+  d.refeicoes.forEach(r => {
+    if (y > 268) { doc.addPage(); doc.setFillColor(14,14,14); doc.rect(0,0,210,297,'F'); y = 14; }
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(200,241,53);
+    doc.text(`${r.horario} — ${r.nome}`, 14, y); y += 5;
+    doc.setFont('helvetica','normal'); doc.setTextColor(210,210,210); doc.setFontSize(9);
+    const lines = doc.splitTextToSize(r.desc, 178);
+    doc.text(lines, 14, y); y += lines.length * 4 + 5;
+  });
+
+  if (d.obs) {
+    doc.setDrawColor(60,60,60); doc.line(14,y,196,y); y += 5;
+    doc.setTextColor(120,120,120); doc.setFontSize(9);
+    doc.text(doc.splitTextToSize(`Obs: ${d.obs}`, 178), 14, y);
+  }
+
+  doc.save(`dieta_${user.name.replace(/\s/g,'_')}.pdf`);
+  toast('PDF da dieta baixado!');
+}
+
+function exportAvaliacaoPDF(uid) {
+  const user = db.users.find(u => u.id === uid) || currentUser;
+  if (!user || !user.avaliacao) { toast('Sem avaliação para exportar.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const a = user.avaliacao;
+  const m = a.medidas;
+  let y = 18;
+
+  doc.setFillColor(14,14,14); doc.rect(0,0,210,297,'F');
+  doc.setTextColor(200,241,53); doc.setFont('helvetica','bold'); doc.setFontSize(22);
+  doc.text('FITCOACH PRO', 14, y); y += 8;
+  doc.setTextColor(180,180,180); doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text('FICHA DE AVALIAÇÃO FÍSICA', 14, y); y += 10;
+  doc.setTextColor(255,255,255); doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text(user.name, 14, y); y += 6;
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(140,140,140);
+  doc.text(`Data: ${formatDate(a.data)}`, 14, y); y += 8;
+  doc.setDrawColor(200,241,53); doc.line(14,y,196,y); y += 8;
+
+  const rows = [
+    ['Peso', a.peso + ' kg'], ['Altura', a.altura + ' m'], ['IMC', a.imc],
+    ['% Gordura', a.gordura + '%'], ['Massa Magra', a.massa + ' kg'], ['FC Repouso', a.fc + ' bpm']
+  ];
+  const rows2 = [
+    ['Peito', m.peito+' cm'], ['Cintura', m.cintura+' cm'], ['Quadril', m.quadril+' cm'],
+    ['Braço', m.braco+' cm'], ['Coxa', m.coxa+' cm'], ['Panturrilha', m.panturrilha+' cm']
+  ];
+
+  doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(200,241,53);
+  doc.text('DADOS GERAIS', 14, y); y += 5;
+  rows.forEach(([label, val]) => {
+    doc.setFont('helvetica','normal'); doc.setTextColor(180,180,180); doc.setFontSize(10);
+    doc.text(label, 14, y);
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold');
+    doc.text(val, 90, y); y += 6;
+  });
+  y += 4;
+  doc.setFont('helvetica','bold'); doc.setTextColor(200,241,53); doc.text('MEDIDAS CORPORAIS', 14, y); y += 5;
+  rows2.forEach(([label, val]) => {
+    doc.setFont('helvetica','normal'); doc.setTextColor(180,180,180);
+    doc.text(label, 14, y);
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold');
+    doc.text(val, 90, y); y += 6;
+  });
+  if (a.obs) {
+    y += 4; doc.setDrawColor(60,60,60); doc.line(14,y,196,y); y += 6;
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(200,241,53);
+    doc.text('PARECER DO PERSONAL:', 14, y); y += 5;
+    doc.setFont('helvetica','normal'); doc.setTextColor(180,180,180); doc.setFontSize(9);
+    const lines = doc.splitTextToSize(a.obs, 178);
+    doc.text(lines, 14, y);
+  }
+
+  doc.save(`avaliacao_${user.name.replace(/\s/g,'_')}.pdf`);
+  toast('PDF da avaliação baixado!');
+}
+
+/* ══════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════ */
+function initials(name) {
+  return name.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+}
+
+function firstName(name) {
+  return name.split(' ')[0];
+}
+
+function emptyState(icon, msg) {
+  return `<div class="empty-state"><span class="icon">${icon}</span><p>${msg}</p></div>`;
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// Login on Enter
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').classList.contains('active')) doLogin();
+});
+
+// Modal close on backdrop click
+document.getElementById('modal-aluno').addEventListener('click', function(e) {
+  if (e.target === this) closeModal('modal-aluno');
+});
+
+// Set today's date on avaliacao form
+document.getElementById('aval-data').value = new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>
