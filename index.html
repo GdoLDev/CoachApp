@@ -64,7 +64,9 @@
 
   /* ── SCREENS ── */
   .screen { display: none; min-height: 100vh; }
-  .screen.active { display: flex; flex-direction: column; }
+  .screen.active { display: block !important; }
+  #login-screen.active { display: flex !important; flex-direction: column; }
+  #student-screen.active, #admin-screen.active { display: flex !important; flex-direction: column; }
 
   /* ══════════════════════════════════
      LOGIN SCREEN
